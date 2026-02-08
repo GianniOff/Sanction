@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace de Réparation Pédagogique</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --error: #e74c3c;
+            --success: #27ae60;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
+        h2 { color: var(--primary); margin-bottom: 10px; }
+        p { color: #666; font-size: 0.9em; }
+        .counter-display { font-size: 4em; font-weight: bold; color: var(--accent); margin: 20px 0; transition: transform 0.1s; }
+        .penalty-msg { color: var(--error); font-weight: bold; display: none; margin-bottom: 10px; }
+        
+        button { 
+            background: var(--accent); color: white; border: none; padding: 15px 40px; 
+            font-size: 1.2em; border-radius: 50px; cursor: pointer; transition: 0.3s; 
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4); }
+        button:active { transform: scale(0.95); }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+        .progress-container { background: #eee; height: 10px; border-radius: 5px; margin: 25px 0; overflow: hidden; }
+        .progress-bar { height: 100%; background: var(--success); width: 0%; transition: 0.3s; }
+        
+        #final-zone { display: none; margin-top: 20px; padding: 20px; background: #e8f6ef; border-radius: 10px; border: 1px dashed var(--success); }
+        .code-valid { font-family: monospace; font-size: 1.5em; color: var(--primary); letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Réparation de l'Acte</h2>
+    <p id="instruction">Prends le temps de réfléchir à chaque clic. L'effort symbolise la réparation du climat scolaire.</p>
+    
+    <div id="penalty" class="penalty-msg">⚠️ Triche détectée : +100 clics de pénalité.</div>
+    
+    <div class="counter-display" id="count">0</div>
+    <div id="target-display" style="color: #999;">Objectif : 500</div>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="bar"></div>
+    </div>
+
+    <button id="clickBtn">Effectuer une action</button>
+
+    <div id="final-zone">
+        <p>✅ Effort terminé. Transmets ce code à ton responsable :</p>
+        <div class="code-valid" id="valCode">---</div>
+    </div>
+</div>
+
+<script>
+    let currentClicks = 0;
+    let targetClicks = 500;
+    let lastClickTime = 0;
+    
+    const btn = document.getElementById('clickBtn');
+    const display = document.getElementById('count');
+    const targetDisplay = document.getElementById('target-display');
+    const bar = document.getElementById('bar');
+    const penaltyMsg = document.getElementById('penalty');
+    const finalZone = document.getElementById('final-zone');
+    const valCodeDisplay = document.getElementById('valCode');
+
+    // Fonction pour générer un code "caché"
+    function generateValidationCode() {
+        const secret = "VALID-";
+        const timestamp = Math.floor(Date.now() / 100000).toString(16);
+        const random = Math.random().toString(36).substring(7).toUpperCase();
+        // On encode en base64 pour que ce ne soit pas lisible directement dans le JS
+        return btoa(secret + random + "-" + timestamp).substring(0, 12);
+    }
+
+    btn.addEventListener('click', (e) => {
+        const now = Date.now();
+        
+        // --- ANTI-AUTOCLICKER ---
+        // Si le clic est trop rapide (moins de 80ms) ou n'est pas "humain" (isTrusted)
+        if (now - lastClickTime < 80 || !e.isTrusted) {
+            targetClicks += 100;
+            targetDisplay.innerText = `Objectif : ${targetClicks}`;
+            penaltyMsg.style.display = 'block';
+            setTimeout(() => { penaltyMsg.style.display = 'none'; }, 2000);
+            return;
+        }
+        
+        lastClickTime = now;
+
+        if (currentClicks < targetClicks) {
+            currentClicks++;
+            display.innerText = currentClicks;
+            
+            // Mise à jour de la barre
+            const progress = (currentClicks / targetClicks) * 100;
+            bar.style.width = progress + "%";
+            
+            // Effet visuel
+            display.style.transform = "scale(1.1)";
+            setTimeout(() => { display.style.transform = "scale(1)"; }, 50);
+
+            // Vérification de la fin
+            if (currentClicks >= targetClicks) {
+                completeTask();
+            }
+        }
+    });
+
+    function completeTask() {
+        btn.disabled = true;
+        btn.style.display = 'none';
+        document.getElementById('instruction').innerText = "Réflexion terminée.";
+        finalZone.style.display = 'block';
+        valCodeDisplay.innerText = generateValidationCode();
+    }
+</script>
+
+</body>
+</html>
