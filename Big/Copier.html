@@ -2,118 +2,107 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punition Numérique Officielle</title>
+    <title>Punition - Aucune erreur permise</title>
     <style>
-        :root { --bg: #1a1a1a; --chalk: #f0f0f0; --accent: #ff4757; }
-        body { background: var(--bg); color: var(--chalk); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; user-select: none; }
+        :root { --bg: #0f0f0f; --text: #e0e0e0; --error: #ff0000; --valid: #00ff41; }
+        body { background: var(--bg); color: var(--text); font-family: 'Consolas', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; user-select: none; }
         
-        .header { text-align: center; margin-bottom: 20px; border: 2px solid var(--accent); padding: 10px; }
+        #warning { color: var(--error); font-weight: bold; border: 1px solid var(--error); padding: 10px; margin-bottom: 20px; text-align: center; }
         
         #blackboard { 
-            width: 90%; max-width: 800px; height: 300px; background: #222; 
-            border: 8px solid #5d4037; border-radius: 4px; padding: 15px;
-            overflow-y: auto; box-shadow: inset 0 0 20px #000; margin-bottom: 20px;
+            width: 90%; max-width: 700px; height: 350px; background: #1a1a1a; 
+            border: 5px solid #444; overflow-y: auto; padding: 15px; margin-bottom: 20px;
         }
 
-        .line { border-bottom: 1px solid #333; padding: 5px 0; color: #aaa; font-size: 0.9em; }
+        .line { border-bottom: 1px solid #222; padding: 4px 0; font-size: 14px; color: #888; }
 
-        .input-area { width: 90%; max-width: 800px; display: flex; flex-direction: column; gap: 10px; }
-        
+        .input-box { width: 90%; max-width: 700px; }
         input { 
-            width: 100%; padding: 15px; font-size: 1.1em; border: 2px solid #444; 
-            background: #000; color: #fff; border-radius: 5px; outline: none;
+            width: 100%; padding: 15px; background: #000; color: #fff; 
+            border: 2px solid #333; outline: none; font-size: 1.1em;
         }
+        input.wrong { border-color: var(--error); background: #200; }
         
-        input:focus { border-color: var(--accent); }
-        input.error { background: #450000; border-color: red; }
-
-        .stats { font-weight: bold; color: var(--accent); margin-bottom: 10px; }
-        .target-text { font-style: italic; color: #888; margin-bottom: 5px; }
+        .counter { font-size: 24px; margin-bottom: 10px; color: var(--valid); }
+        .target { color: #aaa; margin-bottom: 10px; font-style: italic; }
     </style>
 </head>
-<body oncontextmenu="return false;"> <div class="header">
-        <h1>PÉNITENCIER NUMÉRIQUE</h1>
-        <p>Progression sauvegardée automatiquement</p>
+<body oncontextmenu="return false;">
+
+    <div id="warning">
+        ⚠️ ATTENTION : Si vous quittez ou actualisez cette page, la punition sera RÉINITIALISÉE à zéro.
     </div>
 
-    <div class="stats">Lignes complétées : <span id="current">0</span> / <span id="total">0</span></div>
+    <div class="counter">Lignes : <span id="current">0</span> / <span id="total">0</span></div>
     
     <div id="blackboard"></div>
 
-    <div class="input-area">
-        <div class="target-text">Texte à copier : <strong id="text-to-type">...</strong></div>
-        <input type="text" id="typer" placeholder="Tapez ici..." autocomplete="off" onpaste="return false;" ondrop="return false;">
+    <div class="input-box">
+        <div class="target">Texte à copier exactement : <b id="text-to-copy">...</b></div>
+        <input type="text" id="typer" placeholder="Tapez ici la ligne complète..." autocomplete="off" onpaste="return false;" ondrop="return false;">
     </div>
 
     <script>
-        // 1. Extraction des données de l'URL
+        // Extraction des paramètres de l'URL (#Texte|Nombre)
         const hash = decodeURIComponent(window.location.hash.substring(1));
         const [targetText, totalLinesStr] = hash.split('|');
-        const totalLines = parseInt(totalLinesStr) || 10; // 10 par défaut
+        const totalLines = parseInt(totalLinesStr) || 10;
 
         if(!targetText) {
-            document.body.innerHTML = "<h1>Erreur : Aucun texte spécifié dans l'URL.</h1>";
+            document.body.innerHTML = "<h1>Lien invalide. Utilisez le format #Texte|Nombre</h1>";
         }
 
+        let progress = 0;
         const blackboard = document.getElementById('blackboard');
         const typer = document.getElementById('typer');
-        const currentDisplay = document.getElementById('current');
-        const totalDisplay = document.getElementById('total');
-        const textToTypeDisplay = document.getElementById('text-to-type');
+        const currentDisp = document.getElementById('current');
+        document.getElementById('total').innerText = totalLines;
+        document.getElementById('text-to-copy').innerText = targetText;
 
-        // 2. Initialisation / Récupération de la sauvegarde
-        const saveKey = btoa(targetText); // Clé unique basée sur le texte
-        let progress = parseInt(localStorage.getItem(saveKey)) || 0;
+        // --- SÉCURITÉ ANTI-QUITTER ---
+        window.onbeforeunload = function() {
+            if (progress > 0 && progress < totalLines) {
+                return "Si vous partez, votre progression sera perdue !";
+            }
+        };
 
-        totalDisplay.innerText = totalLines;
-        textToTypeDisplay.innerText = targetText;
-        updateDisplay();
-
-        // Afficher les lignes déjà faites au chargement
-        for(let i=0; i<progress; i++) addLineToBoard(i+1);
-
-        // 3. Logique de vérification
-        typer.addEventListener('input', (e) => {
+        // --- LOGIQUE DE TAPE ---
+        typer.addEventListener('input', () => {
             const val = typer.value;
             
-            // Vérification en temps réel pour empêcher de tricher
+            // Vérifie si ce qui est tapé correspond au début de la phrase
             if (!targetText.startsWith(val)) {
-                typer.classList.add('error');
+                typer.classList.add('wrong');
             } else {
-                typer.classList.remove('error');
+                typer.classList.remove('wrong');
             }
 
-            // Si la ligne est finie
+            // Ligne terminée
             if (val === targetText) {
                 progress++;
-                localStorage.setItem(saveKey, progress);
-                addLineToBoard(progress);
-                typer.value = "";
-                updateDisplay();
+                currentDisp.innerText = progress;
                 
+                // Ajouter au tableau
+                const div = document.createElement('div');
+                div.className = 'line';
+                div.innerText = progress + ". " + targetText;
+                blackboard.appendChild(div);
+                blackboard.scrollTop = blackboard.scrollHeight;
+                
+                typer.value = ""; // Reset l'input
+
                 if (progress >= totalLines) {
                     finish();
                 }
             }
         });
 
-        function addLineToBoard(num) {
-            const div = document.createElement('div');
-            div.className = 'line';
-            div.innerText = num + ". " + targetText;
-            blackboard.appendChild(div);
-            blackboard.scrollTop = blackboard.scrollHeight;
-        }
-
-        function updateDisplay() {
-            currentDisplay.innerText = progress;
-        }
-
         function finish() {
             typer.disabled = true;
-            typer.placeholder = "PUNITION TERMINÉE";
-            alert("C'est terminé. Tu peux fermer cette page.");
+            typer.style.borderColor = "var(--valid)";
+            alert("Punition terminée. Vous pouvez maintenant fermer la page.");
+            // Désactiver l'alerte de fermeture
+            window.onbeforeunload = null;
         }
     </script>
 </body>
