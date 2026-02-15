@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace de Réparation Pédagogique</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --error: #e74c3c;
+            --success: #27ae60;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
+        h2 { color: var(--primary); margin-bottom: 10px; }
+        p { color: #666; font-size: 0.9em; line-height: 1.4; }
+        .counter-display { font-size: 4em; font-weight: bold; color: var(--accent); margin: 20px 0; }
+        .penalty-msg { color: var(--error); font-weight: bold; display: none; margin-bottom: 10px; border: 1px solid var(--error); padding: 5px; border-radius: 5px; }
+        
+        button { 
+            background: var(--accent); color: white; border: none; padding: 15px 40px; 
+            font-size: 1.2em; border-radius: 50px; cursor: pointer; transition: 0.3s; 
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+        }
+        button:hover { transform: translateY(-2px); }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+        .progress-container { background: #eee; height: 12px; border-radius: 6px; margin: 25px 0; overflow: hidden; }
+        .progress-bar { height: 100%; background: var(--success); width: 0%; transition: 0.3s; }
+        
+        #final-zone { display: none; margin-top: 20px; padding: 20px; background: #e8f6ef; border-radius: 10px; border: 2px solid var(--success); }
+        .code-valid { font-family: monospace; font-size: 1.4em; color: var(--primary); font-weight: bold; background: #fff; padding: 10px; border-radius: 5px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Espace de Réflexion</h2>
+    <p id="instruction">Chaque clic représente un pas vers la réparation de ton erreur. La progression est sauvegardée automatiquement.</p>
+    
+    <div id="penalty" class="penalty-msg">⚠️ Clic anormal détecté : +100 pénalité</div>
+    
+    <div class="counter-display" id="count">0</div>
+    <div id="target-display" style="color: #999; font-weight: bold;">Objectif : 5000</div>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="bar"></div>
+    </div>
+
+    <button id="clickBtn">Agir positivement</button>
+
+    <div id="final-zone">
+        <p>✨ Travail terminé avec persévérance. Voici ton code de validation :</p>
+        <div class="code-valid" id="valCode">---</div>
+        <p style="margin-top:15px; font-size: 0.8em;">Note ce code ou fais une capture d'écran.</p>
+    </div>
+</div>
+
+<script>
+    // Configuration et clés "cachées"
+    const STORAGE_KEY_COUNT = "_app_usr_perf_val";
+    const STORAGE_KEY_TARGET = "_app_sys_limit_cfg";
+    
+    let currentClicks = parseInt(localStorage.getItem(STORAGE_KEY_COUNT)) || 0;
+    let targetClicks = parseInt(localStorage.getItem(STORAGE_KEY_TARGET)) || 5000;
+    let lastClickTime = 0;
+    
+    const btn = document.getElementById('clickBtn');
+    const display = document.getElementById('count');
+    const targetDisplay = document.getElementById('target-display');
+    const bar = document.getElementById('bar');
+    const penaltyMsg = document.getElementById('penalty');
+    const finalZone = document.getElementById('final-zone');
+    const valCodeDisplay = document.getElementById('valCode');
+
+    // Initialisation au chargement
+    updateUI();
+
+    btn.addEventListener('click', (e) => {
+        const now = Date.now();
+        
+        // --- ANTI-AUTOCLICKER ---
+        if (now - lastClickTime < 100 || !e.isTrusted) {
+            targetClicks += 100;
+            saveState();
+            updateUI();
+            showPenalty();
+            return;
+        }
+        
+        lastClickTime = now;
+
+        if (currentClicks < targetClicks) {
+            currentClicks++;
+            saveState();
+            updateUI();
+
+            if (currentClicks >= targetClicks) {
+                completeTask();
+            }
+        }
+    });
+
+    function saveState() {
+        localStorage.setItem(STORAGE_KEY_COUNT, currentClicks);
+        localStorage.setItem(STORAGE_KEY_TARGET, targetClicks);
+    }
+
+    function updateUI() {
+        display.innerText = currentClicks;
+        targetDisplay.innerText = `Objectif : ${targetClicks}`;
+        const progress = (currentClicks / targetClicks) * 100;
+        bar.style.width = Math.min(progress, 100) + "%";
+        
+        if (currentClicks >= targetClicks) {
+            completeTask();
+        }
+    }
+
+    function showPenalty() {
+        penaltyMsg.style.display = 'block';
+        setTimeout(() => { penaltyMsg.style.display = 'none'; }, 3000);
+    }
+
+    function generateValidationCode() {
+        // Génère un code basé sur le nombre final de clics et un sel secret
+        const secretMask = (targetClicks * 7).toString(16).toUpperCase();
+        const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+        return `RES-${randomPart}-${secretMask}`;
+    }
+
+    function completeTask() {
+        btn.disabled = true;
+        btn.style.display = 'none';
+        document.getElementById('instruction').style.display = 'none';
+        finalZone.style.display = 'block';
+        if (valCodeDisplay.innerText === "---") {
+            valCodeDisplay.innerText = generateValidationCode();
+        }
+    }
+
+    // Empêcher la fermeture accidentelle si pas fini
+    window.onbeforeunload = function() {
+        if (currentClicks < targetClicks && currentClicks > 0) {
+            return "Ton travail n'est pas terminé, es-tu sûr de vouloir quitter ?";
+        }
+    };
+</script>
+
+</body>
+</html>
