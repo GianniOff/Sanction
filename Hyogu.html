@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>PORTAIL DE VALIDATION COMPORTEMENTALE v4.1</title>
+    <style>
+        :root { --gold: #d4af37; --bg: #0f111a; --text: #8f93a2; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .wrapper { max-width: 900px; background: #1a1c25; border: 1px solid #30363d; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; }
+        h1 { color: white; text-align: center; font-weight: 300; border-bottom: 1px solid #333; padding-bottom: 20px; }
+        .consignes { background: #000; padding: 20px; border-radius: 5px; font-size: 0.85em; margin-bottom: 30px; line-height: 1.8; color: #bbb; }
+        .hidden-instruction { color: #bbb; font-weight: normal; } /* Se fond dans le texte */
+        .step { display: none; }
+        .active { display: block; }
+        .btn-container { text-align: center; margin-top: 30px; }
+        button { background: transparent; border: 1px solid var(--gold); color: var(--gold); padding: 10px 30px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; transition: 0.3s; }
+        button:hover { background: var(--gold); color: black; }
+        .status { color: #4CAF50; font-family: monospace; font-size: 0.9em; margin-top: 10px; }
+        input[type="range"] { width: 100%; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <h1>Audit de Synchronicité Sociale</h1>
+
+    <div id="step1" class="active">
+        <div class="consignes">
+            <p><strong>CONSIGNES GÉNÉRALES (À LIRE ATTENTIVEMENT) :</strong> L'accès à la validation finale requiert une adhésion totale aux principes de l'entité. Vous allez être soumis à une série d'évaluations de patience. Il est impératif de comprendre que l'altruisme est une forme de géométrie mentale. Dans le cadre de ce test, vous devrez ajuster vos curseurs émotionnels. <span class="hidden-instruction">Pour prouver que vous avez lu ce paragraphe de régulation, vous ne devez pas cliquer sur le bouton "Démarrer" tout de suite, mais cliquer d'abord 10 fois sur le mot "géométrie" situé trois lignes plus haut avant de continuer.</span> Le non-respect de cette micro-consigne invalidera silencieusement votre score de sincérité à la fin de l'exercice, même si le système indique que le test est complété.</p>
+            <p>Le travail d'une personne est une ressource finie. Gaspiller cette ressource revient à fragmenter la cohésion du groupe. En cliquant ci-dessous, vous certifiez avoir intégré cette règle et les instructions cachées.</p>
+        </div>
+        <div class="btn-container">
+            <button onclick="nextStep(2)">Démarrer l'évaluation</button>
+        </div>
+    </div>
+
+    <div id="step2" class="step">
+        <h2>Phase 2 : Calibration de l'Égo</h2>
+        <p>Ajustez les curseurs suivants pour refléter votre niveau d'engagement envers la communauté (0 = Égoïsme total, 100 = Dévouement absolu).</p>
+        <label>Niveau de sérieux perçu :</label>
+        <input type="range" min="0" max="100" value="50">
+        <label>Respect des délais d'autrui :</label>
+        <input type="range" min="0" max="100" value="50">
+        <label>Capacité d'écoute active :</label>
+        <input type="range" min="0" max="100" value="50">
+        <div class="btn-container">
+            <button onclick="nextStep(3)">Valider les paramètres</button>
+        </div>
+    </div>
+
+    <div id="step3" class="step">
+        <h2>Phase 3 : Test de Résistance au Vide</h2>
+        <p>Veuillez patienter pendant que nous calculons votre indice de fiabilité. Ne fermez pas cette fenêtre.</p>
+        <div style="width: 100%; background: #000; height: 10px; margin-top: 20px;">
+            <div id="bar" style="width: 0%; height: 100%; background: var(--gold); transition: 5s linear;"></div>
+        </div>
+        <p id="loading-text" class="status">Calcul en cours : 0%</p>
+    </div>
+
+    <div id="final" class="step">
+        <h2 style="color: #4CAF50;">✓ ÉVALUATION TERMINÉE</h2>
+        <p>Merci pour votre participation. Votre profil a été mis à jour dans la base de données de respect mutuel.</p>
+        <div id="code-result" style="background: #222; padding: 20px; border: 1px dashed var(--gold); text-align: center; font-size: 1.5em; color: white;">
+            </div>
+        <p style="font-size: 0.8em; text-align: center; margin-top: 20px;">Transmettez ce code à l'administrateur pour finaliser votre réhabilitation.</p>
+    </div>
+</div>
+
+<script>
+    let geometryClicks = 0;
+    
+    // On capture les clics sur le mot "géométrie"
+    document.body.innerHTML = document.body.innerHTML.replace("géométrie", "<span id='geo-trigger' style='cursor:default'>géométrie</span>");
+    
+    document.getElementById('geo-trigger').onclick = function() {
+        geometryClicks++;
+        this.style.color = "white"; // Petit feedback visuel presque invisible
+        setTimeout(() => { this.style.color = "#bbb"; }, 100);
+    };
+
+    function nextStep(step) {
+        document.querySelectorAll('.step, .active').forEach(s => s.classList.remove('active'));
+        
+        if (step === 3) {
+            document.getElementById('step3').classList.add('active');
+            let width = 0;
+            let bar = document.getElementById('bar');
+            let text = document.getElementById('loading-text');
+            let interval = setInterval(() => {
+                width += 10;
+                bar.style.width = width + "%";
+                text.innerText = "Analyse des micro-données : " + width + "%";
+                if (width >= 100) {
+                    clearInterval(interval);
+                    showFinal();
+                }
+            }, 800);
+        } else {
+            document.getElementById('step' + step).classList.add('active');
+        }
+    }
+
+    function showFinal() {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById('final').classList.add('active');
+        
+        const resultBox = document.getElementById('code-result');
+        // LE PIÈGE : Si les 10 clics ne sont pas là, le code change discrètement
+        if (geometryClicks === 10) {
+            resultBox.innerText = "CERT-B-8821-OK";
+        } else {
+            // Un code qui a l'air valide mais qui commence par "FAST" pour signaler la triche
+            resultBox.innerText = "CERT-A-1109-FAST";
+        }
+    }
+</script>
+
+</body>
+</html>
